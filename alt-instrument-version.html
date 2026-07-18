@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#20301f">
+<title>Trail Stake — Location Check</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#E9E3D3;        /* field-notebook kraft */
+    --paper-2:#F3EEE1;      /* raised surface */
+    --ink:#20301F;          /* dark olive ink */
+    --ink-soft:#4C5A46;
+    --line:#B9BCA6;         /* faint contour line */
+    --go:#1E7A45;           /* signal green — confirmed */
+    --go-soft:#E4F0E5;
+    --hold:#C2661C;         /* surveyor orange — hold steady */
+    --hold-soft:#F6E7D4;
+    --stop:#B0392C;         /* alert — blocked / off */
+    --stop-soft:#F6DED9;
+    --sage:#7C8A6B;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:"Space Grotesk",system-ui,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    line-height:1.45;
+    padding:
+      calc(env(safe-area-inset-top) + 20px)
+      calc(env(safe-area-inset-right) + 20px)
+      calc(env(safe-area-inset-bottom) + 24px)
+      calc(env(safe-area-inset-left) + 20px);
+    max-width:520px;margin:0 auto;
+    min-height:100%;
+    display:flex;flex-direction:column;
+  }
+  .eyebrow{
+    font-family:"Space Mono",monospace;
+    font-size:12px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--sage);font-weight:700;
+  }
+  h1{font-size:26px;font-weight:700;letter-spacing:-.01em;margin:2px 0 0}
+  .lede{color:var(--ink-soft);font-size:15px;margin-top:10px;max-width:42ch}
+
+  .stage{flex:1;display:flex;flex-direction:column;justify-content:center;padding:28px 0}
+
+  /* ---- primary + secondary buttons ---- */
+  button{font-family:inherit;cursor:pointer;border:none}
+  .btn{
+    width:100%;padding:17px 20px;border-radius:14px;
+    font-size:17px;font-weight:600;letter-spacing:.01em;
+    background:var(--ink);color:var(--paper);
+    transition:transform .08s ease, opacity .15s ease;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn[disabled]{opacity:.4}
+  .btn.go{background:var(--go)}
+  .btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+  .btn + .btn, .btn + .stack, .stack + .btn{margin-top:12px}
+
+  /* ---- instruction cards ---- */
+  .card{
+    background:var(--paper-2);
+    border:1px solid var(--line);
+    border-radius:16px;padding:20px;margin-bottom:16px;
+  }
+  .card.stop{border-color:var(--stop);background:var(--stop-soft)}
+  .card-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+  .dot{width:11px;height:11px;border-radius:50%;flex:none}
+  .dot.stop{background:var(--stop)}
+  .card h2{font-size:18px;font-weight:700}
+  .card p{font-size:14.5px;color:var(--ink-soft);margin-top:4px}
+
+  ol.steps{list-style:none;counter-reset:s;margin-top:14px}
+  ol.steps li{
+    counter-increment:s;position:relative;
+    padding:11px 0 11px 40px;font-size:15px;
+    border-top:1px solid var(--line);
+  }
+  ol.steps li:first-child{border-top:none}
+  ol.steps li::before{
+    content:counter(s,decimal-leading-zero);
+    font-family:"Space Mono",monospace;font-size:12px;font-weight:700;
+    color:var(--sage);
+    position:absolute;left:0;top:13px;
+  }
+  ol.steps b{font-weight:700;color:var(--ink)}
+  .platform-switch{
+    text-align:center;font-size:13px;color:var(--sage);
+    font-family:"Space Mono",monospace;margin-top:2px;
+    text-decoration:underline;background:none;
+  }
+
+  /* ---- the instrument ---- */
+  .instrument{display:flex;flex-direction:column;align-items:center}
+  .scope{width:250px;height:250px;position:relative}
+  .scope svg{width:100%;height:100%;overflow:visible}
+  .ring-ref{fill:none;stroke:var(--line);stroke-width:1;stroke-dasharray:3 4}
+  .ring-label{font-family:"Space Mono",monospace;font-size:9px;fill:var(--sage);letter-spacing:.05em}
+  #uncertainty{transition:r .9s cubic-bezier(.2,.7,.2,1), fill .5s, stroke .5s}
+  #fix-dot{transition:fill .5s}
+  .crosshair{stroke:var(--ink);stroke-width:1.5;opacity:.45}
+
+  .readout{text-align:center;margin-top:18px}
+  .accuracy{
+    font-family:"Space Mono",monospace;font-weight:700;
+    font-size:52px;line-height:1;letter-spacing:-.02em;
+    font-variant-numeric:tabular-nums;
+  }
+  .accuracy .unit{font-size:22px;color:var(--sage);margin-left:2px}
+  .status-word{
+    font-size:15px;font-weight:600;margin-top:8px;letter-spacing:.02em;
+    display:inline-flex;align-items:center;gap:8px;
+  }
+  .live-pip{width:8px;height:8px;border-radius:50%;background:var(--sage);animation:pulse 1.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.25;transform:scale(.7)}50%{opacity:1;transform:scale(1)}}
+  .meta{
+    font-family:"Space Mono",monospace;font-size:12px;color:var(--ink-soft);
+    margin-top:16px;display:flex;justify-content:center;gap:18px;flex-wrap:wrap;
+  }
+  .meta b{color:var(--ink)}
+
+  .confirm-badge{
+    display:none;align-items:center;justify-content:center;gap:10px;
+    background:var(--go-soft);color:var(--go);border:1.5px solid var(--go);
+    border-radius:12px;padding:13px;font-weight:700;font-size:16px;margin-top:20px;
+  }
+  .confirm-badge.show{display:flex;animation:rise .4s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .foot{font-size:12px;color:var(--sage);text-align:center;font-family:"Space Mono",monospace;margin-top:8px}
+  .hidden{display:none!important}
+  .spin{width:22px;height:22px;border:2.5px solid var(--line);border-top-color:var(--ink);border-radius:50%;animation:rot .8s linear infinite;margin:0 auto}
+  @keyframes rot{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+  <header>
+    <div class="eyebrow">Greenbay Trail Day · Stake Mapper</div>
+    <h1 id="title">Location check</h1>
+    <p class="lede" id="lede">Before you place a stake, let's make sure your phone can pin it accurately.</p>
+  </header>
+
+  <main class="stage" id="stage">
+    <div class="spin"></div>
+  </main>
+
+  <script>
+  // ---- tune these to taste ----
+  const GREEN = 8;    // meters or better = confirmed
+  const AMBER = 20;   // meters or better = usable, hold steady
+  const MAX_M = 40;   // instrument shows up to this radius
+
+  const stage = document.getElementById('stage');
+  const titleEl = document.getElementById('title');
+  const ledeEl = document.getElementById('lede');
+
+  let watchId = null;
+  let best = Infinity;
+  let lastFixTs = 0;
+  let manualPlatform = null; // override for "not this device?"
+
+  // ---------- platform ----------
+  function platform(){
+    if(manualPlatform) return manualPlatform;
+    const ua = navigator.userAgent;
+    const iOS = /iPhone|iPad|iPod/.test(ua) ||
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if(iOS) return 'ios';
+    if(/Android/.test(ua)) return 'android';
+    return 'other';
+  }
+
+  // ---------- boot ----------
+  function boot(){
+    if(!('geolocation' in navigator)) return render('unsupported');
+    if(!window.isSecureContext) return render('insecure');
+    if(navigator.permissions && navigator.permissions.query){
+      navigator.permissions.query({name:'geolocation'}).then(res=>{
+        route(res.state);
+        res.onchange = ()=>route(res.state);
+      }).catch(()=>render('intro'));
+    } else {
+      render('intro');
+    }
+  }
+  function route(state){
+    if(state === 'granted') startWatch();
+    else if(state === 'denied') render('blocked');
+    else render('intro');
+  }
+
+  // ---------- geolocation ----------
+  function requestOnce(){
+    render('acquiring');
+    navigator.geolocation.getCurrentPosition(
+      ()=>startWatch(),
+      onError,
+      {enableHighAccuracy:true, maximumAge:0, timeout:20000}
+    );
+  }
+  function startWatch(){
+    if(watchId!==null) navigator.geolocation.clearWatch(watchId);
+    best = Infinity;
+    render('acquiring');
+    watchId = navigator.geolocation.watchPosition(onFix, onError,
+      {enableHighAccuracy:true, maximumAge:0, timeout:20000});
+  }
+  function onFix(pos){
+    const a = pos.coords.accuracy;
+    if(a < best) best = a;
+    lastFixTs = Date.now();
+    if(document.getElementById('scope')) updateInstrument(pos.coords);
+    else render('live', pos.coords);
+  }
+  function onError(err){
+    if(err.code === 1) render('blocked');          // PERMISSION_DENIED
+    else if(err.code === 2) render('unavailable');  // POSITION_UNAVAILABLE (services off / no signal)
+    else if(!document.getElementById('scope')) render('acquiring'); // timeout while searching
+  }
+  function recheck(){ boot(); }
+
+  // ---------- views ----------
+  function render(view, coords){
+    titleEl.textContent = 'Location check';
+    ledeEl.classList.remove('hidden');
+
+    if(view === 'intro'){
+      ledeEl.textContent = "Before you place a stake, let's make sure your phone can pin it accurately.";
+      stage.innerHTML = `
+        <div class="card">
+          <div class="card-head"><span class="dot" style="background:var(--sage)"></span><h2>What happens next</h2></div>
+          <p>Your phone will ask to use your location. Tap <b>Allow</b> — it's only used while you're placing stakes, and only on this trail.</p>
+        </div>
+        <button class="btn go" id="go">Turn on location</button>
+        <p class="foot">Nothing is saved until you confirm a good fix.</p>`;
+      document.getElementById('go').onclick = requestOnce;
+    }
+
+    else if(view === 'acquiring'){
+      titleEl.textContent = 'Finding satellites…';
+      ledeEl.textContent = 'This can take up to a minute on a cold start. Step into the open if you can.';
+      stage.innerHTML = `<div class="spin"></div>
+        <p class="foot" style="margin-top:18px">Hold steady — accuracy improves as more satellites lock in.</p>`;
+    }
+
+    else if(view === 'blocked'){
+      titleEl.textContent = 'Location is blocked';
+      ledeEl.textContent = 'This browser is set to deny location. Two quick steps to switch it back on:';
+      stage.innerHTML = stepsCard() + `
+        <button class="btn go" id="re">I've done this — recheck</button>
+        <button class="platform-switch" id="sw">Not ${platName()}? Show other steps</button>`;
+      wireRecheck();
+    }
+
+    else if(view === 'unavailable'){
+      titleEl.textContent = "Can't get a fix";
+      ledeEl.textContent = "Permission's granted, but no position is coming through — usually your phone's main Location Services switch is off, or you're under heavy cover.";
+      stage.innerHTML = servicesCard() + `
+        <button class="btn go" id="re">Recheck</button>
+        <button class="platform-switch" id="sw">Not ${platName()}? Show other steps</button>`;
+      wireRecheck();
+    }
+
+    else if(view === 'live'){
+      ledeEl.classList.add('hidden');
+      titleEl.textContent = 'Confirming your fix';
+      stage.innerHTML = instrumentMarkup();
+      document.getElementById('continue').onclick = ()=>render('ready');
+      if(coords) updateInstrument(coords);
+      tickClock();
+    }
+
+    else if(view === 'ready'){
+      if(watchId!==null){ navigator.geolocation.clearWatch(watchId); watchId=null; }
+      titleEl.textContent = 'Location confirmed';
+      ledeEl.classList.add('hidden');
+      stage.innerHTML = `
+        <div class="confirm-badge show" style="font-size:18px;padding:18px">✓ You're ready to place stakes</div>
+        <div class="card" style="margin-top:20px">
+          <div class="card-head"><span class="dot" style="background:var(--go)"></span><h2>Best accuracy this session</h2></div>
+          <p style="font-family:'Space Mono';font-size:15px;color:var(--ink)"><b>±${best.toFixed(1)} m</b> — good enough to map.</p>
+        </div>
+        <p class="foot">Next: photograph the stake and enter its number. (Capture screen wires in here.)</p>
+        <button class="btn ghost" id="back" style="margin-top:16px">Back to live readout</button>`;
+      document.getElementById('back').onclick = ()=>startWatch();
+    }
+
+    else if(view === 'insecure'){
+      titleEl.textContent = 'Needs a secure link';
+      ledeEl.textContent = 'Phones only share location over a secure (https) connection. Open this page from its https link — e.g. the GitHub Pages URL behind the trail QR code.';
+      stage.innerHTML = `<div class="card stop"><div class="card-head"><span class="dot stop"></span><h2>Not secure</h2></div><p>The current address isn't https, so the browser won't allow location here.</p></div>`;
+    }
+
+    else if(view === 'unsupported'){
+      titleEl.textContent = 'Browser too old';
+      ledeEl.textContent = "This browser can't share location. Try Safari (iPhone) or Chrome (Android).";
+      stage.innerHTML = '';
+    }
+  }
+
+  // ---------- instrument ----------
+  function instrumentMarkup(){
+    return `
+    <div class="instrument">
+      <div class="scope">
+        <svg id="scope" viewBox="0 0 200 200" aria-hidden="true">
+          <circle class="ring-ref" cx="100" cy="100" r="${GREEN/MAX_M*90}"></circle>
+          <circle class="ring-ref" cx="100" cy="100" r="${AMBER/MAX_M*90}"></circle>
+          <text class="ring-label" x="100" y="${100-GREEN/MAX_M*90-4}" text-anchor="middle">${GREEN} m</text>
+          <text class="ring-label" x="100" y="${100-AMBER/MAX_M*90-4}" text-anchor="middle">${AMBER} m</text>
+          <circle id="uncertainty" cx="100" cy="100" r="90" fill="rgba(176,57,44,.14)" stroke="var(--stop)" stroke-width="1.5"></circle>
+          <line class="crosshair" x1="100" y1="90" x2="100" y2="110"></line>
+          <line class="crosshair" x1="90" y1="100" x2="110" y2="100"></line>
+          <circle id="fix-dot" cx="100" cy="100" r="4" fill="var(--stop)"></circle>
+        </svg>
+      </div>
+      <div class="readout">
+        <div class="accuracy"><span id="acc">—</span><span class="unit">m</span></div>
+        <div class="status-word" id="statusword"><span class="live-pip"></span><span id="statustext">Searching…</span></div>
+      </div>
+      <div class="meta">
+        <span>lat <b id="lat">—</b></span>
+        <span>lon <b id="lon">—</b></span>
+        <span>best <b id="bestv">—</b></span>
+        <span id="ago">live</span>
+      </div>
+      <div class="confirm-badge" id="badge">✓ Location confirmed — accurate to ±<span id="badgeacc"></span> m</div>
+    </div>
+    <button class="btn go" id="continue" disabled style="margin-top:22px">Confirm &amp; continue</button>
+    <p class="foot" id="hint">Move into the open and hold still to tighten the circle.</p>`;
+  }
+
+  function updateInstrument(c){
+    const a = c.accuracy;
+    const acc = Math.round(a);
+    document.getElementById('acc').textContent = acc;
+    document.getElementById('lat').textContent = c.latitude.toFixed(5);
+    document.getElementById('lon').textContent = c.longitude.toFixed(5);
+    document.getElementById('bestv').textContent = '±'+best.toFixed(1)+'m';
+
+    const r = Math.max(4, Math.min(a, MAX_M)/MAX_M*90);
+    const circle = document.getElementById('uncertainty');
+    const dot = document.getElementById('fix-dot');
+    circle.setAttribute('r', r);
+
+    let color, soft, word;
+    if(a <= GREEN){ color='var(--go)';  soft='rgba(30,122,69,.14)';  word='Locked in — great fix'; }
+    else if(a <= AMBER){ color='var(--hold)'; soft='rgba(194,102,28,.14)'; word='Usable — hold steady to improve'; }
+    else { color='var(--stop)'; soft='rgba(176,57,44,.14)'; word='Searching — too coarse to place'; }
+    circle.setAttribute('fill', soft);
+    circle.setAttribute('stroke', color);
+    dot.setAttribute('fill', color);
+    document.getElementById('statustext').textContent = word;
+    document.getElementById('statusword').style.color = color;
+    document.getElementById('hint').textContent =
+      a <= GREEN ? 'Good to go. Tap confirm.' : 'Move into the open and hold still to tighten the circle.';
+
+    const btn = document.getElementById('continue');
+    const badge = document.getElementById('badge');
+    if(a <= AMBER){ btn.disabled = false; btn.textContent = a<=GREEN ? 'Confirm & continue' : 'Confirm anyway (±'+acc+'m)'; }
+    else btn.disabled = true;
+    if(a <= GREEN){ badge.classList.add('show'); document.getElementById('badgeacc').textContent = acc; }
+    else badge.classList.remove('show');
+  }
+
+  function tickClock(){
+    clearInterval(window.__clk);
+    window.__clk = setInterval(()=>{
+      const el = document.getElementById('ago');
+      if(!el){ clearInterval(window.__clk); return; }
+      const s = Math.round((Date.now()-lastFixTs)/1000);
+      el.textContent = lastFixTs===0 ? 'waiting' : (s<2 ? 'live' : s+'s ago');
+      el.style.color = s>6 ? 'var(--hold)' : 'var(--sage)';
+    },1000);
+  }
+
+  // ---------- platform-specific instructions ----------
+  function platName(){ return {ios:'iPhone', android:'Android', other:'this device'}[platform()]; }
+
+  function stepsCard(){
+    const p = platform();
+    if(p === 'ios') return `
+      <div class="card stop">
+        <div class="card-head"><span class="dot stop"></span><h2>On iPhone — Safari</h2></div>
+        <ol class="steps">
+          <li>Tap <b>ᴀA</b> at the left of the address bar</li>
+          <li>Choose <b>Website Settings</b></li>
+          <li>Set <b>Location</b> to <b>Allow</b></li>
+          <li>Come back here and tap recheck</li>
+        </ol>
+      </div>`;
+    if(p === 'android') return `
+      <div class="card stop">
+        <div class="card-head"><span class="dot stop"></span><h2>On Android — Chrome</h2></div>
+        <ol class="steps">
+          <li>Tap the <b>tune / lock icon</b> left of the address bar</li>
+          <li>Tap <b>Permissions</b>, then <b>Location</b></li>
+          <li>Choose <b>Allow</b></li>
+          <li>Come back here and tap recheck</li>
+        </ol>
+      </div>`;
+    return `
+      <div class="card stop">
+        <div class="card-head"><span class="dot stop"></span><h2>In your browser</h2></div>
+        <ol class="steps">
+          <li>Tap the <b>lock / site-info icon</b> by the address bar</li>
+          <li>Open <b>Site settings</b> or <b>Permissions</b></li>
+          <li>Set <b>Location</b> to <b>Allow</b>, then recheck</li>
+        </ol>
+      </div>`;
+  }
+
+  function servicesCard(){
+    const p = platform();
+    if(p === 'ios') return `
+      <div class="card">
+        <div class="card-head"><span class="dot" style="background:var(--hold)"></span><h2>Turn on Location Services</h2></div>
+        <ol class="steps">
+          <li>Open the <b>Settings</b> app</li>
+          <li>Go to <b>Privacy &amp; Security → Location Services</b></li>
+          <li>Switch <b>Location Services</b> on</li>
+          <li>Scroll to your browser and set it to <b>While Using the App</b></li>
+          <li>Also turn on <b>Precise Location</b></li>
+          <li>Return here and tap recheck</li>
+        </ol>
+      </div>`;
+    if(p === 'android') return `
+      <div class="card">
+        <div class="card-head"><span class="dot" style="background:var(--hold)"></span><h2>Turn on Location</h2></div>
+        <ol class="steps">
+          <li>Swipe down for <b>Quick Settings</b></li>
+          <li>Tap <b>Location</b> to turn it on</li>
+          <li>Open <b>Settings → Location → Location Services</b></li>
+          <li>Make sure <b>Google Location Accuracy</b> is on</li>
+          <li>Return here and tap recheck</li>
+        </ol>
+      </div>`;
+    return `
+      <div class="card">
+        <div class="card-head"><span class="dot" style="background:var(--hold)"></span><h2>Turn on Location Services</h2></div>
+        <ol class="steps">
+          <li>Open your device <b>Settings</b></li>
+          <li>Turn on the system <b>Location</b> switch</li>
+          <li>Return here and tap recheck</li>
+        </ol>
+      </div>`;
+  }
+
+  function wireRecheck(){
+    document.getElementById('re').onclick = recheck;
+    const sw = document.getElementById('sw');
+    if(sw) sw.onclick = ()=>{
+      const order = ['ios','android','other'];
+      const cur = platform();
+      manualPlatform = order[(order.indexOf(cur)+1)%order.length];
+      render(document.getElementById('scope') ? 'live' : (titleEl.textContent.includes('blocked') ? 'blocked' : 'unavailable'));
+    };
+  }
+
+  boot();
+  </script>
+</body>
+</html>
