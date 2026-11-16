@@ -1,0 +1,49 @@
+# ============================================================
+#  THIS REPOSITORY IS PUBLIC.
+#  https://github.com/greersome/gbt-trail-map  (GitHub Pages)
+#
+#  Anything committed here is visible to anyone, forever —
+#  deleting a file later does NOT un-publish it.
+#
+#  This file therefore works DENY-BY-DEFAULT: everything is
+#  ignored unless it is explicitly allowed below.
+#
+#  TO PUBLISH A NEW FILE, add an explicit "!" line for it, e.g.
+#      !/new-page.html
+#  Then confirm before committing:
+#      git status --short
+#      git check-ignore -v <file>     # should print nothing
+#
+#  This directory is also used as a working folder for FGBT
+#  documents, contact exports and downloads. None of that
+#  belongs on the public web. Deny-by-default is what keeps a
+#  stray `git add -A` from publishing it.
+# ============================================================
+
+# Ignore everything by default.
+*
+
+# --- Allowed: the published site ---------------------------
+!/.gitignore
+!/README.md
+!/index.html
+!/alt-instrument-version.html
+
+# ============================================================
+#  Explicitly called out so the intent survives this file
+#  being edited later. These must NEVER be committed:
+#
+#   FGBT_contacts.csv        25 volunteer records — name, email,
+#                            two phones, street address, city,
+#                            postal code, organization, title
+#   FGBTcontacts.vcf         26 vCards, same data
+#   kate-contact.vcf         named individual
+#   Home Sleep Study.ics     personal medical appointment
+#   *.docx / *.pdf           FGBT strategic plan drafts
+#   drive-download-*.zip     bulk Drive exports
+#   traildayinformation*     volunteer packets
+#
+#  The deny-by-default rule above already covers these. The
+#  list is here so that anyone loosening the rule can see what
+#  it was protecting.
+# ============================================================
